@@ -167,6 +167,8 @@ export default class MinecraftBundle {
 
 		// Remove each file or directory
 		for (const filePath of filesToDelete) {
+			if (filePath.endsWith('.jar-disable')) continue; // Ignore files with .jar-disable extension
+
 			try {
 				const stats = fs.statSync(filePath);
 				if (stats.isDirectory()) {
@@ -214,7 +216,9 @@ export default class MinecraftBundle {
 				if (stats.isDirectory()) {
 					this.getFiles(fullPath, collectedFiles);
 				} else {
-					collectedFiles.push(fullPath);
+					if (!fullPath.endsWith('.jar-disable')) { // Ignore files with .jar-disable extension
+						collectedFiles.push(fullPath);
+					}
 				}
 			}
 		}
