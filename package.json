@@ -1,6 +1,6 @@
 {
     "name": "minecraft-java-core-azbetter",
-    "version": "4.0.0-alpha.2",
+    "version": "4.0.1",
     "types": "./build/Index.d.ts",
     "exports": {
         ".": {
