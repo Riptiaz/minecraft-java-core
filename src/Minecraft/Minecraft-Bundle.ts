@@ -70,7 +70,7 @@ export default class MinecraftBundle {
 			}
 
 			// If the file is supposed to have a certain hash, check it.
-			if (fs.existsSync(file.path)) {
+			if (fs.existsSync(file.path) || fs.existsSync(file.path + '-disable')) {
 				// Build the instance path prefix for ignoring checks
 				let replaceName = `${this.options.path}/`;
 				if (this.options.instance) {
@@ -85,8 +85,10 @@ export default class MinecraftBundle {
 
 				// If the file has a hash and doesn't match, mark it for download
 				if (file.sha1) {
-					const localHash = await getFileHash(file.path);
-					if (localHash !== file.sha1) {
+					const originalHash = fs.existsSync(file.path) ? await getFileHash(file.path) : null;
+					const disableHash = fs.existsSync(file.path + '-disable') ? await getFileHash(file.path + '-disable') : null;
+
+					if (originalHash !== file.sha1 && disableHash !== file.sha1) {
 						toDownload.push(file);
 					}
 				}

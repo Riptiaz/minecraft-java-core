@@ -1,6 +1,6 @@
 {
-    "name": "minecraft-java-core",
-    "version": "4.0.0-alpha.1",
+    "name": "minecraft-java-core-azbetter",
+    "version": "4.0.0-alpha.2",
     "types": "./build/Index.d.ts",
     "exports": {
         ".": {
@@ -30,7 +30,7 @@
         "Minecraft-Forge"
     ],
     "author": "Luuxis",
-    "license": "CCANC",
+    "license": "SEE LICENSE IN LICENSE.MD",
     "dependencies": {
         "7zip-bin": "^5.2.0",
         "adm-zip": "^0.5.16",
@@ -54,5 +54,9 @@
     "repository": {
         "type": "git",
         "url": "git+https://github.com/luuxis/minecraft-java-core.git"
+    },
+    "main": "index.js",
+    "directories": {
+        "test": "test"
     }
 }
