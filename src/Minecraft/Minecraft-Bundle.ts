@@ -60,6 +60,13 @@ export default class MinecraftBundle {
 			file.path = path.resolve(this.options.path, file.path).replace(/\\/g, '/');
 			file.folder = file.path.split('/').slice(0, -1).join('/');
 
+			// Vérifie si une version désactivée de ce fichier existe
+				const disabledPath = `${file.path}-disable`;
+				if (fs.existsSync(disabledPath)) {
+    				continue; // Ignore ce fichier, car sa version désactivée est présente
+				}
+
+
 			// If it's a direct content file (CFILE), we create/write the content immediately
 			if (file.type === 'CFILE') {
 				if (!fs.existsSync(file.folder)) {
@@ -69,8 +76,13 @@ export default class MinecraftBundle {
 				continue;
 			}
 
+			// Ignore les fichiers désactivés (.jar-disable)
+			if (file.path.endsWith('.jar-disable')) {
+			continue;
+			}
+
 			// If the file is supposed to have a certain hash, check it.
-			if (fs.existsSync(file.path) || fs.existsSync(file.path + '-disable')) {
+			if (fs.existsSync(file.path)) {
 				// Build the instance path prefix for ignoring checks
 				let replaceName = `${this.options.path}/`;
 				if (this.options.instance) {
@@ -85,10 +97,8 @@ export default class MinecraftBundle {
 
 				// If the file has a hash and doesn't match, mark it for download
 				if (file.sha1) {
-					const originalHash = fs.existsSync(file.path) ? await getFileHash(file.path) : null;
-					const disableHash = fs.existsSync(file.path + '-disable') ? await getFileHash(file.path + '-disable') : null;
-
-					if (originalHash !== file.sha1 && disableHash !== file.sha1) {
+					const localHash = await getFileHash(file.path);
+					if (localHash !== file.sha1) {
 						toDownload.push(file);
 					}
 				}
@@ -169,8 +179,11 @@ export default class MinecraftBundle {
 
 		// Remove each file or directory
 		for (const filePath of filesToDelete) {
-			if (filePath.endsWith('.jar-disable')) continue; // Ignore files with .jar-disable extension
-
+			// Ne supprime pas les fichiers désactivés
+			if (filePath.endsWith('.jar-disable')) {
+				continue;
+			}
+		
 			try {
 				const stats = fs.statSync(filePath);
 				if (stats.isDirectory()) {
@@ -218,9 +231,7 @@ export default class MinecraftBundle {
 				if (stats.isDirectory()) {
 					this.getFiles(fullPath, collectedFiles);
 				} else {
-					if (!fullPath.endsWith('.jar-disable')) { // Ignore files with .jar-disable extension
-						collectedFiles.push(fullPath);
-					}
+					collectedFiles.push(fullPath);
 				}
 			}
 		}
