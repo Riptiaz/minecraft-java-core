@@ -7,6 +7,7 @@
 
 import fs from 'fs';
 import os from 'os';
+import semver from 'semver';
 import { getPathLibraries, isold } from '../utils/Index.js';
 
 /**
@@ -26,6 +27,7 @@ export interface LaunchOptions {
 	path: string;              // Base path to Minecraft data folder
 	instance?: string;         // Instance name (if using multi-instance approach)
 	authenticator: any;        // Auth object containing tokens, user info, etc.
+	version?: string;         // Minecraft version
 	memory: {
 		min?: string;             // Minimum memory (e.g. "512M", "1G")
 		max?: string;             // Maximum memory (e.g. "4G", "8G")
@@ -58,6 +60,13 @@ export interface VersionJSON {
 	};
 	libraries?: Array<any>;    // List of library dependencies
 	nativesList?: Array<string>;
+}
+
+export interface Library {
+	name: string;
+	loader?: string;
+	natives?: Record<string, string>;
+	rules?: { os?: { name?: string } }[];
 }
 
 /**
@@ -278,15 +287,31 @@ export default class MinecraftArguments {
 			combinedLibraries = loaderJson.libraries.concat(combinedLibraries);
 		}
 
-		// Remove duplicates by `library.name`
-		combinedLibraries = combinedLibraries.filter((lib, index, self) =>
-			index === self.findIndex(other => other.name === lib.name)
+		const map = new Map();
+
+		for (const dep of combinedLibraries) {
+			const parts = getPathLibraries(dep.name);
+			const version = semver.coerce(parts.version);
+			if (!version) continue;
+
+			const pathParts = parts.path.split('/');
+			const basePath = pathParts.slice(0, -1).join('/');
+
+			const key = `${basePath}/${parts.name.replace(`-${parts.version}`, '')}`;
+			const current = map.get(key);
+
+			if (!current || semver.gt(version, current.version)) {
+				map.set(key, { ...dep, version });
+			}
+		}
+
+		const latest: Record<string, Library> = Object.fromEntries(
+			Array.from(map.entries()).map(([key, value]) => [key, value as Library])
 		);
 
 		// Prepare to accumulate all library paths
 		const librariesList: string[] = [];
-
-		for (const lib of combinedLibraries) {
+		for (const lib of Object.values(latest)) {
 			// Skip certain logging libraries if flagged (e.g., in Forge's "loader" property)
 			if (lib.loader && lib.name.startsWith('org.apache.logging.log4j:log4j-slf4j2-impl')) continue;
 
