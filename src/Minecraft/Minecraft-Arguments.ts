@@ -28,6 +28,7 @@ export interface LaunchOptions {
 	instance?: string;         // Instance name (if using multi-instance approach)
 	authenticator: any;        // Auth object containing tokens, user info, etc.
 	version?: string;         // Minecraft version
+	bypassOffline?: boolean;   // Bypass offline mode for multiplayer
 	memory: {
 		min?: string;             // Minimum memory (e.g. "512M", "1G")
 		max?: string;             // Maximum memory (e.g. "4G", "8G")
@@ -245,6 +246,14 @@ export default class MinecraftArguments {
 			}
 		}
 
+		// bypass offline mode multiplayer
+		if (this.options?.bypassOffline) {
+			jvmArgs.push('-Dminecraft.api.auth.host=https://nope.invalid/');
+			jvmArgs.push('-Dminecraft.api.account.host=https://nope.invalid/');
+			jvmArgs.push('-Dminecraft.api.session.host=https://nope.invalid/');
+			jvmArgs.push('-Dminecraft.api.services.host=https://nope.invalid/');
+		}
+
 		// If natives are specified, add the native library path
 		if (versionJson.nativesList) {
 			jvmArgs.push(`-Djava.library.path=${this.options.path}/versions/${versionJson.id}/natives`);
@@ -291,7 +300,7 @@ export default class MinecraftArguments {
 
 		for (const dep of combinedLibraries) {
 			const parts = getPathLibraries(dep.name);
-			const version = semver.coerce(parts.version);
+			const version = semver.valid(semver.coerce(parts.version));
 			if (!version) continue;
 
 			const pathParts = parts.path.split('/');
@@ -300,7 +309,10 @@ export default class MinecraftArguments {
 			const key = `${basePath}/${parts.name.replace(`-${parts.version}`, '')}`;
 			const current = map.get(key);
 
-			if (!current || semver.gt(version, current.version)) {
+			const isSupportedVersion = semver.satisfies(semver.valid(semver.coerce(this.options.version)), '1.14.4 - 1.18.2');
+			const isWindows = process.platform === 'win32';
+
+			if (!current || semver.gt(version, current.version) && (isSupportedVersion && isWindows)) {
 				map.set(key, { ...dep, version });
 			}
 		}
